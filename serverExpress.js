@@ -6,7 +6,9 @@ const port = 3000;
 
 let alumnos = JSON.parse(fs.readFileSync('alumnos.json'));
 
-app.get('/', (req, res) => res.send('Hello DASWorld!'));
+app.use(express.static(__dirname + '/public'));
+
+//app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.route('/home').get((req, res) => res.send('DASWorld HOME1'));
 app.route('/alumnos').get((req,res)=>res.json(alumnos));
 app.route('/alumnos/:id').get((req,res)=>{

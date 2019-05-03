@@ -40,10 +40,10 @@ app.route('/api/alumno')
             error: "faltan atributos"
         });
     });
-
+    
 
 app.route('/api/alumno/:id')
-    .get((req, res) => {
+    .get(existeId,(req, res) => {
         let id = req.params.id;
         let al = alumnos.find(alu => alu.id == id);
         if (al) {
@@ -56,16 +56,53 @@ app.route('/api/alumno/:id')
                 error: "Id no encontrado"
             });
     })
-    .put((req, res) => {
+    .put(existeId,(req, res) => {
         let id = req.params.id;
         if (updateAlumno(id, req.body)) {
             res.send();
         } else {
             res.status(400).send({error: "no se encontró id o faltan datos"});
         }
+    })
+    .patch(existeId,(req,res)=>{
+        let id = req.params.id;
+        if (partialUpdateAlumno(id, req.body)) {
+            res.send();
+        } else {
+            res.status(400).send({error: "no se encontró id o faltan datos"});
+        }
+    })
+    .delete(existeId,(req,res)=>{
+        let id = req.params.id;
+        let pos = alumnos.findIndex(al => al.id == id);
+        if(pos==-1) {
+            res.status(404).send({error:"no se encontró el id"});
+            return;
+        }
+
+        alumnos.splice(pos,1);
+        fs.writeFileSync('alumnos.json', JSON.stringify(alumnos));
+        res.send();
+
     });
 
+
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+
+function partialUpdateAlumno(id, alumno){
+    let pos = alumnos.findIndex(al => al.id == id);
+
+    if(pos>=0){
+        alumnos[pos].nombre = (alumno.nombre)? alumno.nombre: alumnos[pos].nombre;
+        alumnos[pos].carrera = (alumno.carrera)? alumno.carrera: alumnos[pos].carrera;
+        alumnos[pos].calificacion = (alumno.calificacion)? alumno.calificacion: alumnos[pos].calificacion;
+        fs.writeFileSync('alumnos.json', JSON.stringify(alumnos));
+        return true;
+    }
+   
+    return false;
+
+}
 
 function updateAlumno(id, alumno) {
     let pos = alumnos.findIndex(al => al.id == id);
@@ -77,4 +114,19 @@ function updateAlumno(id, alumno) {
     }
 
     return false;
+}
+
+
+function existeId(req, res, next){
+   
+    let id = req.params.id;
+    console.log("verificando id "+id);
+
+    let pos = alumnos.findIndex(al=> al.id == id);
+    if(pos==-1){
+        res.status(404).send({error:"Id no existe"});
+        return;
+    }
+
+    next();
 }

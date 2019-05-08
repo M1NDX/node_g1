@@ -4,6 +4,7 @@ const fs = require('fs');
 const chalk = require('chalk');
 const bodyParser = require('body-parser')
 const cors = require('cors');
+let {Alumno} = require('./mongodb/mongodb-connect');
 
 const app = express();
 const port = 3000;
@@ -23,22 +24,49 @@ app.use(cors(corsOptions));
 app.use(express.static(__dirname + '/public'));
 //app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.route('/api/alumno')
-    .get((req, res) => res.json(alumnos))
+    .get((req, res) => {
+        Alumno.find({},{_id:0,nombre:1},(err,docs)=>{
+            if(err){
+                res.status(404).send();
+                return;
+            }
+
+            res.json(docs);
+        })
+       
+    
+    })
     .post((req, res) => {
         console.log(chalk.blue(JSON.stringify(req.body)));
-        console.log(chalk.blue(req.body.id));
+        //console.log(chalk.blue(req.body.id));
 
-        if (req.body.id && req.body.nombre && req.body.carrera) {
-            alumnos.push(req.body);
-            fs.writeFileSync('alumnos.json', JSON.stringify(alumnos));
+        if ( req.body.nombre && req.body.carrera && req.body.calificacion) {
+            //alumnos.push(req.body);
+            //fs.writeFileSync('alumnos.json', JSON.stringify(alumnos));
             //console.log(alumnos);
-            res.status(201).send();
-            return;
+           
+            let newAlumno = new Alumno(req.body);
+
+            newAlumno.save((err,doc)=>{
+                if(err)
+                    console.log(err);
+
+                if(doc){
+                    res.status(201).send();
+                }else{
+                    res.status(400).send({error: "no se guardó"});
+                }
+               return;
+            })
+
+            
+        }else{
+            res.status(400).send({
+                error: "faltan atributos"
+            });
         }
 
-        res.status(400).send({
-            error: "faltan atributos"
-        });
+        
     });
     
 

@@ -4,10 +4,11 @@ const fs = require('fs');
 const chalk = require('chalk');
 const bodyParser = require('body-parser')
 const cors = require('cors');
-let {Alumno} = require('./mongodb/mongodb-connect');
+let {Alumno} = require('./mongodb/Alumno');
+let {User} = require('./mongodb/User');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 let alumnos = JSON.parse(fs.readFileSync('alumnos.json'));
 
@@ -115,6 +116,47 @@ app.route('/api/alumno/:id')
     });
 
 
+app.route('/api/user/login')
+    .post((req, res)=>{
+         
+
+         let usr = req.body.email;
+         let pwd = req.body.password;
+         console.log("usr:"+usr+ " pwd:"+pwd);
+        
+         User.findOne({email:usr}).then((user)=>{
+             console.log(user);
+            if(pwd == user.password){
+               let token =  user.generateToken();
+               user.token = token;
+               User.updateOne({email}).then((usrUpdated)=>{
+                    console.log("actualizado");
+                    res.set('x-auth',token);
+                    res.send();
+                    return;
+               }).catch((er)=>console.log(er))
+            }
+         }).catch((err)=> console.log(err))
+         res.status(400).send();
+    })
+    .get((req,res)=>{
+        // let user = {email:"test2@test.com", password:"testtest", token:"123",acceso:"admin" }
+        // let nUser = new User(user);
+        // nUser.save((err,doc)=>{
+        //     if(doc){
+        //         res.send(doc);
+        //     }else{
+        //         console.log(err);
+        //         res.status(400).send();
+        //     }
+        // } )
+        User.find({},(err,docs)=>{
+            console.log(docs);
+            res.send();
+        })
+    })
+
+
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 
 function partialUpdateAlumno(id, alumno){
@@ -158,3 +200,5 @@ function existeId(req, res, next){
 
     next();
 }
+
+

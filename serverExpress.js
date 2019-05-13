@@ -24,8 +24,27 @@ app.use(cors(corsOptions));
 
 app.use(express.static(__dirname + '/public'));
 //app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
+
+function autenticar(req,res, next){
+    let token = req.get('x-auth');
+    if(!token){
+        res.status(401).send({error: "no hay token"});
+        return;
+    }
+
+    User.verificarToken(token).then((user)=>{
+        console.log("Token verificado ...");
+        req.userid = user._id;
+        next();
+    }).catch((err)=>{
+        res.status(401).send(err);
+    });
+
+}
+
 app.route('/api/alumno')
-    .get((req, res) => {
+    .get(autenticar, (req, res) => {
+        console.log("Se está autenticado por usuario: " + req.userid);
         Alumno.find({},{_id:0,nombre:1},(err,docs)=>{
             if(err){
                 res.status(404).send();
@@ -129,31 +148,45 @@ app.route('/api/user/login')
             if(pwd == user.password){
                let token =  user.generateToken();
                user.token = token;
-               User.updateOne({email}).then((usrUpdated)=>{
+               User.updateOne({email:usr}, user).then((usrUpdated)=>{
                     console.log("actualizado");
+                    console.log(usrUpdated);
                     res.set('x-auth',token);
                     res.send();
                     return;
-               }).catch((er)=>console.log(er))
+               }).catch((er)=>{
+                   console.log(er);
+                   res.status(400).send(er);
+               })
             }
-         }).catch((err)=> console.log(err))
-         res.status(400).send();
+         }).catch((err)=> {
+             console.log(err);
+             res.status(400).send(err);
+         })
+         
     })
-    .get((req,res)=>{
-        // let user = {email:"test2@test.com", password:"testtest", token:"123",acceso:"admin" }
-        // let nUser = new User(user);
-        // nUser.save((err,doc)=>{
-        //     if(doc){
-        //         res.send(doc);
-        //     }else{
-        //         console.log(err);
-        //         res.status(400).send();
-        //     }
-        // } )
-        User.find({},(err,docs)=>{
-            console.log(docs);
-            res.send();
-        })
+
+app.route('/api/user/logout')    
+    .get((req, res)=>{
+       let token = req.get('x-auth');
+       if(!token){
+           console.log("no existe token");
+           res.status(400).send({error: "falta header con token"})
+           return;
+       }    
+
+       // * SE ASUME QUE SI HAY TOKEN
+       let datosUsuario = User.verDatosToken(token);
+       console.log(datosUsuario);
+       if(datosUsuario && datosUsuario._id){
+           
+           User.updateOne({_id:datosUsuario._id},{token: "123"}).then((doc)=>{
+              res.send(doc);
+           }).catch((err)=>{
+               console.log(err);
+               res.status(404).send();
+           })
+       }
     })
 
 
